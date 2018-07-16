@@ -1,11 +1,9 @@
 require 'spec_helper'
 
+=begin
 file_content_7 = "/usr/bin/systemctl restart rsyslog > /dev/null 2>&1 || true"
 file_content_6 = "/sbin/service rsyslog restart > /dev/null 2>&1 || true"
-
-describe 'openscap::schedule' do
-  context 'supported operating systems' do
-    on_supported_os.each do |os, os_facts|
+=end
 
       shared_examples 'a working module' do
         it { is_expected.to compile.with_all_deps }
@@ -15,17 +13,21 @@ describe 'openscap::schedule' do
         it { is_expected.to create_file('/var/log/openscap') }
         it { is_expected.to create_cron('openscap') }
       end
+describe 'openscap::schedule' do
+  context 'supported operating systems' do
+    on_supported_os.each do |os, os_facts|
+
 
       context "on #{os}" do
         context 'with a valid environment' do
           let(:facts) {
             oscap_fact = {
               :oscap => {
-                'path' => '/bin/oscap',
-                'version' => '1.2.16',
+                'path'                     => '/bin/oscap',
+                'version'                  => '1.2.16',
                 'supported_specifications' => {
-                  'XCCDF' => '1.2',
-                  'OVAL' => '5.11.1'
+                  'XCCDF'  => '1.2',
+                  'OVAL'   => '5.11.1'
                 },
                 'profiles' => {
                   '/usr/share/xml/scap/ssg/content' => {
@@ -41,7 +43,7 @@ describe 'openscap::schedule' do
           }
 
           let(:params) {{
-            :scap_profile => 'xccdf_org.ssgproject.content_profile_standard',
+            :scap_profile    => 'xccdf_org.ssgproject.content_profile_standard',
             :ssg_data_stream => "ssg-#{os_facts[:operatingsystem].downcase}#{os_facts[:operatingsystemmajrelease]}-ds.xml"
           }}
 
@@ -49,20 +51,28 @@ describe 'openscap::schedule' do
 
           context 'with logrotate => true' do
             let(:params) {{
-              :scap_profile => 'xccdf_org.ssgproject.content_profile_standard',
+              :scap_profile    => 'xccdf_org.ssgproject.content_profile_standard',
               :ssg_data_stream => "ssg-#{os_facts[:operatingsystem].downcase}#{os_facts[:operatingsystemmajrelease]}-ds.xml",
-              :logrotate => true
+              :logrotate       => true
             }}
 
             it_behaves_like 'a working module'
             it { is_expected.to create_class('logrotate') }
-            it { is_expected.to create_logrotate__rule('openscap') }
+            it { is_expected.to create_logrotate__rule('openscap').with(
+              { :log_files => [ "/var/log/openscap/*.xml" ],
+                :missingok => true
 
+              }
+            ) }
+            it { is_expected.to create_logrotate__rule('openscap').with_rotate(3) }
+
+=begin
             if os_facts[:operatingsystemmajrelease].to_s < '7'
               it { is_expected.to create_file('/etc/logrotate.d/openscap').with_content(/#{file_content_6}/)}
             else
               it { is_expected.to create_file('/etc/logrotate.d/openscap').with_content(/#{file_content_7}/)}
             end
+=end
           end
 
           context 'when the specified ssg_base_dir is not found' do
